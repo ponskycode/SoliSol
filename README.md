@@ -1,0 +1,2 @@
+# SoliSol
+AI Solitaire Solver
