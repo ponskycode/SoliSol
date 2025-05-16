@@ -10,35 +10,36 @@ def preprocess_obs(obs_dict):
 
     return np.concatenate([columns, lengths, deck_size])
 
-env = SpiderSolitaireEnv()
-obs, _ = env.reset()
-obs_vec = preprocess_obs(obs)
-obs_size = obs_vec.shape[0]
-action_size = env.action_space.n
+class DQNTrainer:
+    def __init__(self, env=None, episodes=500, max_steps=500):
+        self.env = env if env is not None else SpiderSolitaireEnv()
+        obs, _ = self.env.reset()
+        obs_vec = preprocess_obs(obs)
+        obs_size = obs_vec.shape[0]
+        action_size = self.env.action_space.n
+        self.agent = DQNAgent(obs_size=obs_size, action_size=action_size)
+        self.episodes = episodes
+        self.max_steps = max_steps
 
-agent = DQNAgent(obs_size=obs_size, action_size=action_size)
+    def train(self):
+        for ep in range(self.episodes):
+            obs, _ = self.env.reset()
+            obs = preprocess_obs(obs)
+            total_reward = 0
 
-episodes = 500
-MAX_STEPS = 500
+            done = False
+            for step in range(self.max_steps):
+                action = self.agent.act(obs)
+                next_obs, reward, done, _, _ = self.env.step(action)
+                next_obs = preprocess_obs(next_obs)
 
-for ep in range(episodes):
-    obs, _ = env.reset()
-    obs = preprocess_obs(obs)
-    total_reward = 0
+                self.agent.remember(obs, action, reward, next_obs, done)
+                self.agent.replay()
 
-    done = False
-    for step in range(MAX_STEPS):
-        action = agent.act(obs)
-        next_obs, reward, done, _, _ = env.step(action)
-        next_obs = preprocess_obs(next_obs)
+                obs = next_obs
+                total_reward += reward
 
-        agent.remember(obs, action, reward, next_obs, done)
-        agent.replay()
+                if done:
+                    break
 
-        obs = next_obs
-        total_reward += reward
-        
-        if done:
-            break
-
-    print(f"Ep {ep+1}: Total reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.3f}")
+            print(f"Ep {ep+1}: Total reward: {total_reward:.2f}, Epsilon: {self.agent.epsilon:.3f}")
